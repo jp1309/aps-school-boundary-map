@@ -4,6 +4,10 @@ Interactive map and address dataset for the condition:
 
 Middle School is Dorothy Hamm or Williamsburg, and High School is Yorktown.
 
+Public site:
+
+https://jp1309.github.io/aps-school-boundary-map/
+
 ## What It Does
 
 The app uses official Arlington/APS GIS data to identify address points that are inside:
