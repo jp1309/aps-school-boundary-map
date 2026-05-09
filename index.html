@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>APS Yorktown + Dorothy Hamm/Williamsburg</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --ink: #17212b;
+      --muted: #5b6773;
+      --line: #d5dee5;
+      --green: #138a5b;
+      --green-soft: #dff4ea;
+      --blue: #0052cc;
+      --red: #d63031;
+      --shadow: 0 12px 32px rgba(24, 38, 50, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Arial, Helvetica, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      min-height: 100vh;
+    }
+
+    aside {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      padding: 16px;
+      overflow: auto;
+      z-index: 2;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
+    h2 {
+      margin: 20px 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .rule {
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .stat {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    button,
+    .link-button {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 9px;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    button:hover,
+    .link-button:hover {
+      border-color: #92a6b4;
+      background: #f8fafb;
+    }
+
+    button.active {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: #0d6844;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .primary {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .legend {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .legend-row {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 9px;
+      align-items: center;
+    }
+
+    .swatch {
+      height: 7px;
+      border-radius: 4px;
+      background: var(--green);
+    }
+
+    .swatch.blue { background: var(--blue); }
+    .swatch.red { background: var(--red); }
+    .swatch.dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      justify-self: center;
+      background: #111827;
+    }
+
+    .list-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 10px 0 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .address-list {
+      display: grid;
+      gap: 6px;
+      max-height: 34vh;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .address-item {
+      width: 100%;
+      text-align: left;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.25;
+      font-weight: 400;
+    }
+
+    .address-item strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .address-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .result {
+      min-height: 22px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .sources {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .sources a { color: #155e75; }
+
+    .leaflet-popup-content {
+      font-family: Arial, Helvetica, sans-serif;
+      letter-spacing: 0;
+    }
+
+    @media (max-width: 960px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(70vh, 1fr);
+      }
+
+      aside {
+        max-height: 48vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      #map { height: 70vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <h1>Casas/direcciones que cumplen</h1>
+      <p>Mapa real con datos oficiales de Arlington/APS, no recortes del PDF.</p>
+
+      <div class="rule">
+        <strong>Condicion:</strong><br>
+        Middle School = Dorothy Hamm o Williamsburg<br>
+        <strong>y</strong> High School = Yorktown
+      </div>
+
+      <div class="stats">
+        <div class="stat"><strong id="totalCount">-</strong><span>direcciones en la condicion</span></div>
+        <div class="stat"><strong id="visibleCount">-</strong><span>visibles con filtro</span></div>
+        <div class="stat"><strong id="dhmsCount">-</strong><span>Dorothy Hamm + Yorktown</span></div>
+        <div class="stat"><strong id="wmsCount">-</strong><span>Williamsburg + Yorktown</span></div>
+      </div>
+
+      <h2>Filtro</h2>
+      <div class="filters">
+        <button type="button" class="active" data-filter="all">Todas</button>
+        <button type="button" data-filter="Dorothy Hamm Middle School">Dorothy</button>
+        <button type="button" data-filter="Williamsburg Middle School">Williamsburg</button>
+      </div>
+
+      <h2>Buscar en direcciones que cumplen</h2>
+      <input id="localSearch" type="text" placeholder="Ej. Little Falls, 31st, Roosevelt">
+      <div class="list-meta"><span id="listLabel">Primeras direcciones</span><a href="data/qualified_addresses.csv" target="_blank" rel="noopener">CSV</a></div>
+      <div id="addressList" class="address-list"></div>
+
+      <h2>Verificar otra direccion</h2>
+      <div class="row">
+        <input id="checkAddress" type="text" placeholder="Ej. 2800 N George Mason Dr">
+        <button type="button" class="primary" id="checkButton">Check</button>
+      </div>
+      <div id="checkResult" class="result">Tambien puedes hacer clic en cualquier punto del mapa.</div>
+
+      <h2>Leyenda</h2>
+      <div class="legend">
+        <div class="legend-row"><span class="swatch"></span><span>Area objetivo: interseccion Middle + Yorktown</span></div>
+        <div class="legend-row"><span class="swatch blue"></span><span>Limite Yorktown High School</span></div>
+        <div class="legend-row"><span class="swatch red"></span><span>Limite Middle School seleccionado</span></div>
+        <div class="legend-row"><span class="swatch dot"></span><span>Direccion oficial que cumple</span></div>
+      </div>
+
+      <h2>Fuentes</h2>
+      <div class="sources">
+        <div>School Boundary Polygons, Arlington GIS Open Data.</div>
+        <div>Address Points, Arlington GIS Open Data.</div>
+        <div>Los PDFs SY2025-26 quedan como referencia visual.</div>
+        <div><a href="https://www.apsva.us/registration/maps-boundaries/" target="_blank" rel="noopener">APS Maps & Boundaries</a></div>
+        <div><a href="https://arlgis.maps.arcgis.com/apps/instant/lookup/index.html?appid=fcbef7f2d50c4b2bae5558ae51cb5c14" target="_blank" rel="noopener">APS Boundary Locator</a></div>
+      </div>
+    </aside>
+
+    <main>
+      <div id="map"></div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <script src="data/school_data.js"></script>
+  <script>
+    const boundaries = window.SCHOOL_BOUNDARIES;
+    const addresses = window.QUALIFIED_ADDRESSES;
+    const counts = window.QUALIFIED_COUNTS;
+    const middleFeatures = boundaries.features.filter((feature) => feature.properties.MS_Name);
+    const yorktownFeature = boundaries.features.find((feature) => feature.properties.HS_Name);
+    const addressFeatures = addresses.features;
+    let activeFilter = 'all';
+    let currentSearch = '';
+    let visibleFeatures = addressFeatures;
+    let pointLayer;
+    let selectedMarker;
+
+    const map = L.map('map', {
+      preferCanvas: true,
+      zoomControl: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 20,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const targetZones = buildTargetZones();
+
+    const targetLayer = L.geoJSON(targetZones, {
+      style: (feature) => ({
+        color: '#138a5b',
+        weight: 2,
+        fillColor: feature.properties.middle.includes('Dorothy') ? '#42b883' : '#8ac926',
+        fillOpacity: 0.34
+      }),
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<strong>${feature.properties.middle}</strong><br>High School: Yorktown`);
+      }
+    }).addTo(map);
+
+    L.geoJSON(yorktownFeature, {
+      style: {
+        color: '#0052cc',
+        weight: 4,
+        fillOpacity: 0
+      }
+    }).addTo(map);
+
+    L.geoJSON({ type: 'FeatureCollection', features: middleFeatures }, {
+      style: {
+        color: '#d63031',
+        weight: 3,
+        fillOpacity: 0
+      }
+    }).addTo(map);
+
+    const boundsLayer = targetLayer.getBounds().isValid() ? targetLayer : L.geoJSON(boundaries);
+    map.fitBounds(boundsLayer.getBounds(), { padding: [24, 24] });
+
+    document.getElementById('totalCount').textContent = addressFeatures.length.toLocaleString('en-US');
+    document.getElementById('dhmsCount').textContent = (counts['Dorothy Hamm Middle School'] || 0).toLocaleString('en-US');
+    document.getElementById('wmsCount').textContent = (counts['Williamsburg Middle School'] || 0).toLocaleString('en-US');
+
+    renderPoints();
+    renderList();
+
+    document.querySelectorAll('[data-filter]').forEach((button) => {
+      button.addEventListener('click', () => {
+        activeFilter = button.dataset.filter;
+        document.querySelectorAll('[data-filter]').forEach((item) => item.classList.toggle('active', item === button));
+        refresh();
+      });
+    });
+
+    document.getElementById('localSearch').addEventListener('input', (event) => {
+      currentSearch = event.target.value.trim().toUpperCase();
+      refresh();
+    });
+
+    document.getElementById('checkButton').addEventListener('click', checkTypedAddress);
+    document.getElementById('checkAddress').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') checkTypedAddress();
+    });
+
+    map.on('click', (event) => {
+      const status = classifyPoint(event.latlng.lng, event.latlng.lat);
+      L.popup()
+        .setLatLng(event.latlng)
+        .setContent(formatStatus(status))
+        .openOn(map);
+    });
+
+    function buildTargetZones() {
+      if (!window.turf) return { type: 'FeatureCollection', features: [] };
+      const features = [];
+      middleFeatures.forEach((middle) => {
+        try {
+          const clipped = turf.intersect(yorktownFeature, middle);
+          if (clipped) {
+            clipped.properties = {
+              middle: middle.properties.MS_Name,
+              high: yorktownFeature.properties.HS_Name
+            };
+            features.push(clipped);
+          }
+        } catch (error) {
+          console.warn('Intersection failed', middle.properties.MS_Name, error);
+        }
+      });
+      return { type: 'FeatureCollection', features };
+    }
+
+    function refresh() {
+      renderPoints();
+      renderList();
+    }
+
+    function filteredAddressFeatures() {
+      return addressFeatures.filter((feature) => {
+        const props = feature.properties;
+        if (activeFilter !== 'all' && props.Middle_School !== activeFilter) return false;
+        if (!currentSearch) return true;
+        return `${props.FULL_ADDRESS || ''} ${props.Middle_School || ''} ${props.ZIP5 || ''}`.toUpperCase().includes(currentSearch);
+      });
+    }
+
+    function renderPoints() {
+      visibleFeatures = filteredAddressFeatures();
+      document.getElementById('visibleCount').textContent = visibleFeatures.length.toLocaleString('en-US');
+      if (pointLayer) map.removeLayer(pointLayer);
+      pointLayer = L.geoJSON({ type: 'FeatureCollection', features: visibleFeatures }, {
+        pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+          radius: 3,
+          color: '#111827',
+          weight: 1,
+          fillColor: feature.properties.Middle_School.includes('Dorothy') ? '#0ea5e9' : '#f59e0b',
+          fillOpacity: 0.85
+        }),
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties;
+          layer.bindPopup(`<strong>${props.FULL_ADDRESS}</strong><br>${props.Middle_School}<br>High School: ${props.High_School}<br>Units: ${props.UNITCOUNT || 1}`);
+        }
+      }).addTo(map);
+    }
+
+    function renderList() {
+      const list = document.getElementById('addressList');
+      list.innerHTML = '';
+      document.getElementById('listLabel').textContent = `Mostrando ${Math.min(visibleFeatures.length, 200).toLocaleString('en-US')} de ${visibleFeatures.length.toLocaleString('en-US')}`;
+      visibleFeatures.slice(0, 200).forEach((feature) => {
+        const props = feature.properties;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'address-item';
+        button.innerHTML = `<strong>${escapeHtml(props.FULL_ADDRESS)}</strong><span>${escapeHtml(props.Middle_School)} | ${props.ZIP5 || ''}</span>`;
+        button.addEventListener('click', () => zoomToFeature(feature));
+        list.appendChild(button);
+      });
+    }
+
+    function zoomToFeature(feature) {
+      const [lng, lat] = feature.geometry.coordinates;
+      map.setView([lat, lng], 18);
+      if (selectedMarker) map.removeLayer(selectedMarker);
+      selectedMarker = L.circleMarker([lat, lng], {
+        radius: 8,
+        color: '#ffffff',
+        weight: 3,
+        fillColor: '#111827',
+        fillOpacity: 1
+      }).addTo(map);
+      const props = feature.properties;
+      selectedMarker.bindPopup(`<strong>${props.FULL_ADDRESS}</strong><br>${props.Middle_School}<br>High School: ${props.High_School}`).openPopup();
+    }
+
+    function classifyPoint(lng, lat) {
+      if (!window.turf) return { qualifies: null, reason: 'Turf.js no cargo; no puedo calcular el punto.' };
+      const pt = turf.point([lng, lat]);
+      const inYorktown = turf.booleanPointInPolygon(pt, yorktownFeature);
+      const middle = middleFeatures.find((feature) => turf.booleanPointInPolygon(pt, feature));
+      return {
+        qualifies: Boolean(inYorktown && middle),
+        inYorktown,
+        middle: middle ? middle.properties.MS_Name : null
+      };
+    }
+
+    function formatStatus(status) {
+      if (status.qualifies === null) return status.reason;
+      if (status.qualifies) {
+        return `<strong>Si cumple</strong><br>${status.middle}<br>High School: Yorktown`;
+      }
+      return `<strong>No cumple</strong><br>${status.inYorktown ? 'Esta en Yorktown, pero no en Dorothy/Williamsburg.' : 'No esta dentro del area Yorktown seleccionada.'}${status.middle ? `<br>Middle detectado: ${status.middle}` : ''}`;
+    }
+
+    async function checkTypedAddress() {
+      const input = document.getElementById('checkAddress');
+      const result = document.getElementById('checkResult');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const local = addressFeatures.find((feature) => (feature.properties.FULL_ADDRESS || '').toUpperCase() === query.toUpperCase());
+      if (local) {
+        zoomToFeature(local);
+        result.innerHTML = `<strong>Si cumple.</strong> ${escapeHtml(local.properties.FULL_ADDRESS)} esta en ${escapeHtml(local.properties.Middle_School)} y Yorktown.`;
+        return;
+      }
+
+      result.textContent = 'Buscando coordenadas...';
+      try {
+        const geocodeUrl = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?' + new URLSearchParams({
+          f: 'json',
+          SingleLine: `${query}, Arlington, VA`,
+          outFields: 'Match_addr,Addr_type',
+          maxLocations: '1',
+          sourceCountry: 'USA',
+          location: '-77.10,38.89',
+          searchExtent: '-77.20,38.82,-77.02,38.94'
+        });
+        const response = await fetch(geocodeUrl);
+        const data = await response.json();
+        if (!data.candidates || !data.candidates.length) {
+          result.textContent = 'No encontre esa direccion. Prueba con numero y calle.';
+          return;
+        }
+        const candidate = data.candidates[0];
+        const lng = candidate.location.x;
+        const lat = candidate.location.y;
+        const status = classifyPoint(lng, lat);
+        map.setView([lat, lng], 17);
+        if (selectedMarker) map.removeLayer(selectedMarker);
+        selectedMarker = L.circleMarker([lat, lng], {
+          radius: 9,
+          color: '#ffffff',
+          weight: 3,
+          fillColor: status.qualifies ? '#138a5b' : '#d63031',
+          fillOpacity: 1
+        }).addTo(map);
+        selectedMarker.bindPopup(`<strong>${escapeHtml(candidate.address)}</strong><br>${formatStatus(status)}`).openPopup();
+        result.innerHTML = `${escapeHtml(candidate.address)}<br>${formatStatus(status)}`;
+      } catch (error) {
+        result.textContent = 'No pude consultar el geocoder. Usa la busqueda local o el locator oficial de APS.';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[char]));
+    }
+  </script>
+</body>
+</html>

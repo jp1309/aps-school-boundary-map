@@ -1,0 +1,13 @@
+# Raw source downloads. They can be recreated with scripts/rebuild_data.py.
+data/address_points_all.geojson
+data/high_all.geojson
+data/middle_all.geojson
+
+# Prototype images and PDF-rendered intermediates from the first approach.
+*.png
+assets/
+
+# Local caches
+__pycache__/
+*.pyc
+
